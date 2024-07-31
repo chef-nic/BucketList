@@ -8,15 +8,19 @@
 import CoreLocation
 import Foundation
 import LocalAuthentication
+import MapKit
 
 extension ContentView {
     @Observable
     class ViewModel {
-        let savePath = URL.documentsDirectory.appending(path: "SavedPlaces")
-
         private(set) var locations: [Location]
         var selectedPlace: Location?
         var isUnlocked = false
+
+        var authenticationError = "Unknown error"
+        var isShowingAuthenticationError = false
+
+        let savePath = URL.documentsDirectory.appending(path: "SavedPlaces")
 
         init() {
             do {
@@ -39,6 +43,7 @@ extension ContentView {
         func addLocation(at point: CLLocationCoordinate2D) {
             let newLocation = Location(id: UUID(), name: "New location", description: "", latitude: point.latitude, longitude: point.longitude)
             locations.append(newLocation)
+            save()
         }
 
         func update(location: Location) {
@@ -46,6 +51,7 @@ extension ContentView {
 
             if let index = locations.firstIndex(of: selectedPlace) {
                 locations[index] = location
+                save()
             }
         }
 
@@ -57,16 +63,19 @@ extension ContentView {
                 let reason = "Please authenticate yourself to unlock your places."
 
                 context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, authenticationError in
-
                     if success {
                         self.isUnlocked = true
                     } else {
-                        // error
+                        self.authenticationError = "There was a problem authenticating you; please try again."
+                        self.isShowingAuthenticationError = true
                     }
                 }
             } else {
                 // no biometrics
+                authenticationError = "Sorry, your device does not support biometric authentication."
+                isShowingAuthenticationError = true
             }
         }
     }
 }
+
